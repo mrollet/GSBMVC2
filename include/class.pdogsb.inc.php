@@ -4,7 +4,6 @@
  
  * Utilise les services de la classe PDO
  * pour l'application GSB
- * Les attributs sont tous statiques,
  * les 4 premiers pour la connexion
  * $monPdo de type PDO 
  * $monPdoGsb qui contiendra l'unique instance de la classe
@@ -16,22 +15,22 @@
  */
 
 class PdoGsb{   		
-      	private static $serveur='mysql:host=localhost';
-      	private static $bdd='dbname=gsb_frais';   		
-      	private static $user='root' ;    		
-      	private static $mdp='sa' ;	
-		private static $monPdo;
-		private static $monPdoGsb=null;
+      	private $serveur='mysql:host=localhost';
+      	private $bdd='dbname=gsb_frais';   		
+      	private $user='root' ;    		
+      	private $mdp='' ;	
+        private $monPdo; //objet de connection à la bdd
+	private static $monPdoGsb=null; //instance unique de la classe
 /**
  * Constructeur privé, crée l'instance de PDO qui sera sollicitée
  * pour toutes les méthodes de la classe
  */				
 	private function __construct(){
-    	PdoGsb::$monPdo = new PDO(PdoGsb::$serveur.';'.PdoGsb::$bdd, PdoGsb::$user, PdoGsb::$mdp); 
-		PdoGsb::$monPdo->query("SET CHARACTER SET utf8");
+            $this->monPdo = new PDO($this->serveur.';'.$this->bdd, $this->user, $this->mdp,array(PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION)); 
+            $this->monPdo->query("SET CHARACTER SET utf8");
 	}
 	public function _destruct(){
-		PdoGsb::$monPdo = null;
+            $this->monPdo = null;
 	}
 /**
  * Fonction statique qui crée l'unique instance de la classe
@@ -41,10 +40,10 @@ class PdoGsb{
  * @return l'unique objet de la classe PdoGsb
  */
 	public  static function getPdoGsb(){
-		if(PdoGsb::$monPdoGsb==null){
-			PdoGsb::$monPdoGsb= new PdoGsb();
+		if(self::$monPdoGsb==null){
+			self::$monPdoGsb= new PdoGsb();
 		}
-		return PdoGsb::$monPdoGsb;  
+		return self::$monPdoGsb;  
 	}
 /**
  * Retourne les informations d'un visiteur
@@ -56,7 +55,7 @@ class PdoGsb{
 	public function getInfosVisiteur($login, $mdp){
 		$req = "select visiteur.id as id, visiteur.nom as nom, visiteur.prenom as prenom from visiteur 
 		where visiteur.login='$login' and visiteur.mdp='$mdp'";
-		$rs = PdoGsb::$monPdo->query($req);
+		$rs = $this->monPdo->query($req);
 		$ligne = $rs->fetch();
 		return $ligne;
 	}
@@ -75,7 +74,7 @@ class PdoGsb{
 	public function getLesFraisHorsForfait($idVisiteur,$mois){
 	    $req = "select * from lignefraishorsforfait where lignefraishorsforfait.idvisiteur ='$idVisiteur' 
 		and lignefraishorsforfait.mois = '$mois' ";	
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$lesLignes = $res->fetchAll();
 		$nbLignes = count($lesLignes);
 		for ($i=0; $i<$nbLignes; $i++){
@@ -93,7 +92,7 @@ class PdoGsb{
 */
 	public function getNbjustificatifs($idVisiteur, $mois){
 		$req = "select fichefrais.nbjustificatifs as nb from  fichefrais where fichefrais.idvisiteur ='$idVisiteur' and fichefrais.mois = '$mois'";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$laLigne = $res->fetch();
 		return $laLigne['nb'];
 	}
@@ -111,7 +110,7 @@ class PdoGsb{
 		on fraisforfait.id = lignefraisforfait.idfraisforfait
 		where lignefraisforfait.idvisiteur ='$idVisiteur' and lignefraisforfait.mois='$mois' 
 		order by lignefraisforfait.idfraisforfait";	
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$lesLignes = $res->fetchAll();
 		return $lesLignes; 
 	}
@@ -122,7 +121,7 @@ class PdoGsb{
 */
 	public function getLesIdFrais(){
 		$req = "select fraisforfait.id as idfrais from fraisforfait order by fraisforfait.id";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$lesLignes = $res->fetchAll();
 		return $lesLignes;
 	}
@@ -144,7 +143,7 @@ class PdoGsb{
 			$req = "update lignefraisforfait set lignefraisforfait.quantite = $qte
 			where lignefraisforfait.idvisiteur = '$idVisiteur' and lignefraisforfait.mois = '$mois'
 			and lignefraisforfait.idfraisforfait = '$unIdFrais'";
-			PdoGsb::$monPdo->exec($req);
+			$this->monPdo->exec($req);
 		}
 		
 	}
@@ -158,7 +157,7 @@ class PdoGsb{
 	public function majNbJustificatifs($idVisiteur, $mois, $nbJustificatifs){
 		$req = "update fichefrais set nbjustificatifs = $nbJustificatifs 
 		where fichefrais.idvisiteur = '$idVisiteur' and fichefrais.mois = '$mois'";
-		PdoGsb::$monPdo->exec($req);	
+		$this->monPdo->exec($req);	
 	}
 /**
  * Teste si un visiteur possède une fiche de frais pour le mois passé en argument
@@ -172,7 +171,7 @@ class PdoGsb{
 		$ok = false;
 		$req = "select count(*) as nblignesfrais from fichefrais 
 		where fichefrais.mois = '$mois' and fichefrais.idvisiteur = '$idVisiteur'";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$laLigne = $res->fetch();
 		if($laLigne['nblignesfrais'] == 0){
 			$ok = true;
@@ -187,7 +186,7 @@ class PdoGsb{
 */	
 	public function dernierMoisSaisi($idVisiteur){
 		$req = "select max(mois) as dernierMois from fichefrais where fichefrais.idvisiteur = '$idVisiteur'";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$laLigne = $res->fetch();
 		$dernierMois = $laLigne['dernierMois'];
 		return $dernierMois;
@@ -210,13 +209,13 @@ class PdoGsb{
 		}
 		$req = "insert into fichefrais(idvisiteur,mois,nbJustificatifs,montantValide,dateModif,idEtat) 
 		values('$idVisiteur','$mois',0,0,now(),'CR')";
-		PdoGsb::$monPdo->exec($req);
+		$this->monPdo->exec($req);
 		$lesIdFrais = $this->getLesIdFrais();
 		foreach($lesIdFrais as $uneLigneIdFrais){
 			$unIdFrais = $uneLigneIdFrais['idfrais'];
 			$req = "insert into lignefraisforfait(idvisiteur,mois,idFraisForfait,quantite) 
 			values('$idVisiteur','$mois','$unIdFrais',0)";
-			PdoGsb::$monPdo->exec($req);
+			$this->monPdo->exec($req);
 		 }
 	}
 /**
@@ -231,10 +230,10 @@ class PdoGsb{
 */
 	public function creeNouveauFraisHorsForfait($idVisiteur,$mois,$libelle,$date,$montant){
 		$dateFr = dateFrancaisVersAnglais($date);
-                $libEchap = PdoGsb::$monPdo->quote($libelle);
+                $libEchap = $this->monPdo->quote($libelle);
 		$req = "insert into lignefraishorsforfait 
 		values('','$idVisiteur','$mois',$libEchap,'$dateFr','$montant')";
-                PdoGsb::$monPdo->exec($req);
+                $this->monPdo->exec($req);
 	}
 /**
  * Supprime le frais hors forfait dont l'id est passé en argument
@@ -243,7 +242,7 @@ class PdoGsb{
 */
 	public function supprimerFraisHorsForfait($idFrais){
 		$req = "delete from lignefraishorsforfait where lignefraishorsforfait.id =$idFrais ";
-		PdoGsb::$monPdo->exec($req);
+		$this->monPdo->exec($req);
 	}
 /**
  * Retourne les mois pour lesquel un visiteur a une fiche de frais
@@ -254,7 +253,7 @@ class PdoGsb{
 	public function getLesMoisDisponibles($idVisiteur){
 		$req = "select fichefrais.mois as mois from  fichefrais where fichefrais.idvisiteur ='$idVisiteur' 
 		order by fichefrais.mois desc ";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$lesMois =array();
 		$laLigne = $res->fetch();
 		while($laLigne != null)	{
@@ -281,7 +280,7 @@ class PdoGsb{
 		$req = "select ficheFrais.idEtat as idEtat, ficheFrais.dateModif as dateModif, ficheFrais.nbJustificatifs as nbJustificatifs, 
 			ficheFrais.montantValide as montantValide, etat.libelle as libEtat from  fichefrais inner join Etat on ficheFrais.idEtat = Etat.id 
 			where fichefrais.idvisiteur ='$idVisiteur' and fichefrais.mois = '$mois'";
-		$res = PdoGsb::$monPdo->query($req);
+		$res = $this->monPdo->query($req);
 		$laLigne = $res->fetch();
 		return $laLigne;
 	}
@@ -296,7 +295,7 @@ class PdoGsb{
 	public function majEtatFicheFrais($idVisiteur,$mois,$etat){
 		$req = "update ficheFrais set idEtat = '$etat', dateModif = now() 
 		where fichefrais.idvisiteur ='$idVisiteur' and fichefrais.mois = '$mois'";
-		PdoGsb::$monPdo->exec($req);
+		$this->monPdo->exec($req);
 	}
 }
 ?>
