@@ -17,8 +17,8 @@
 class PdoGsb{   		
       	private $serveur='mysql:host=localhost';
       	private $bdd='dbname=gsb_frais';   		
-      	private $user='root' ;    		
-      	private $mdp='' ;	
+      	private $user='userGsb' ;    		
+      	private $mdp='secret' ;	
         private $monPdo; //objet de connection à la bdd
 	private static $monPdoGsb=null; //instance unique de la classe
 /**
